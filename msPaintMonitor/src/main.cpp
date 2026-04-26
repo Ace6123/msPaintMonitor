@@ -1,8 +1,12 @@
 #include <Windows.h>
-#include <iostream>
 
 int main()
 {
-	std::cout << "Hello world" << std::endl;
+	HDC screen = GetDC(NULL);
+	while (true)
+	{
+		Rectangle(screen, 0, 10, 10, 10);
+		Sleep(20);
+	}
 	return 0;
 }
