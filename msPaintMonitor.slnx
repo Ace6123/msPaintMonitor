@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="msPaintMonitor/msPaintMonitor.vcxproj" />
+  <Project Path="msPaintMonitor/msPaintMonitor.vcxproj" Id="8b0ece32-2df3-419a-b83f-2662f5124b65" />
 </Solution>
