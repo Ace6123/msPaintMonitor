@@ -168,6 +168,6 @@ static void input(myrgb& c, int& brushWidth)
             }
 
         }
-        //Sleep(10);
+        Sleep(10);
     }
 }
