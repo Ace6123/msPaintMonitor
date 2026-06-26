@@ -1,9 +1,10 @@
 #include <Windows.h>
 #include <thread>
+
 std::atomic<int> zDelta;
 std::atomic<int> mode = 1;
-struct myrgb
-{
+
+struct myrgb {
     int r;
     int g;
     int b;
@@ -14,46 +15,51 @@ static void input(myrgb& c, int& brushWidth);
 myrgb c{ 0, 0, 0 };
 
 LRESULT WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
-{
-    switch(msg)
-    { 
-    case WM_DESTROY:
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
+    switch(msg){ 
+    case WM_DESTROY: {
         PostQuitMessage(0);
         return 0;
         break;
+    }
     
-    case WM_MOUSEWHEEL: 
+    case WM_MOUSEWHEEL: {
         zDelta = GET_WHEEL_DELTA_WPARAM(wp);
-        if (zDelta > 0)
-        {
+        if (zDelta > 0){
             1 + 1;
         }
-        else if (zDelta < 0)
-        {
+        else if (zDelta < 0){
             1 + 1;
         }
         break;
     }
+    }
     return DefWindowProcW(hwnd, msg, wp, lp);
 }
 
-int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
-{
+int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow){
     myrgb c = { 0, 0, 0 };
     int brushWidth = 25;
     HDC screen = GetDC(NULL);
-    HBRUSH redBrush = CreateSolidBrush(RGB(c.r, c.g, c.b));
-    HPEN redPen = CreatePen(PS_SOLID, 1, RGB(c.r, c.g, c.b));
+
+    HBRUSH brushColor = CreateSolidBrush(RGB(c.r, c.g, c.b));
+    HPEN penColor = CreatePen(PS_SOLID, 1, RGB(c.r, c.g, c.b));
+    
+
+    myrgb lastColor = c;
     
     int width = GetSystemMetrics(SM_CXSCREEN);
     int height = GetSystemMetrics(SM_CYSCREEN);
 
     HDC memDC = CreateCompatibleDC(screen);
+    HDC tempDC = CreateCompatibleDC(screen);
     HBITMAP memBitmap = CreateCompatibleBitmap(screen, width, height);
+    HBITMAP tempBitmap = CreateCompatibleBitmap(screen, width, height);
     SelectObject(memDC, memBitmap);
+    SelectObject(tempDC, tempBitmap);
 
     BitBlt(memDC, 0, 0, width, height, screen, 0, 0, SRCCOPY);
+    BitBlt(tempDC, 0, 0, width, height, screen, 0, 0, SRCCOPY);
 
     POINT mouse;
 
@@ -84,12 +90,18 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, PWSTR pCmdLine, in
     std::thread t1(input, std::ref(c), std::ref(brushWidth));
     t1.detach();
 
-    while (true)
-    {
-        HBRUSH redBrush = CreateSolidBrush(RGB(c.r, c.g, c.b));
-        HPEN redPen = CreatePen(PS_SOLID, 1, RGB(c.r, c.g, c.b));
-        SelectObject(memDC, redBrush);
-        SelectObject(memDC, redPen);
+    SelectObject(memDC, brushColor);
+    SelectObject(memDC, penColor);
+
+    while(true){
+        BitBlt(memDC, 0, 0, width, height, tempDC, 0, 0, SRCCOPY);
+
+        if (c.r != lastColor.r || c.g != lastColor.b || c.b != lastColor.b) {
+            DeleteObject(SelectObject(memDC, CreateSolidBrush(RGB(c.r, c.g, c.b))));
+            DeleteObject(SelectObject(memDC, CreatePen(PS_SOLID, 1, RGB(c.r, c.g, c.b))));
+            lastColor = c;
+        }
+        
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
             break;
         if (GetAsyncKeyState('S') & 0x8000)
@@ -105,12 +117,17 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, PWSTR pCmdLine, in
             mode = 4;
 
         GetCursorPos(&mouse);
-        if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) Ellipse(memDC, mouse.x - brushWidth / 2, mouse.y - brushWidth / 2, mouse.x + brushWidth / 2, mouse.y + brushWidth / 2);
+        if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+            Ellipse(memDC, mouse.x - brushWidth / 2, mouse.y - brushWidth / 2, mouse.x + brushWidth / 2, mouse.y + brushWidth / 2);
+
+
+        BitBlt(tempDC, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+        Ellipse(memDC, mouse.x - brushWidth / 2, mouse.y - brushWidth / 2, mouse.x + brushWidth / 2, mouse.y + brushWidth / 2);
         BitBlt(screen, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
     }
 
-    DeleteObject(redBrush);
-    DeleteObject(redPen);
+    DeleteObject(brushColor);
+    DeleteObject(penColor);
     DeleteObject(memBitmap);
     DeleteDC(memDC);
     ReleaseDC(NULL, screen);
@@ -118,30 +135,30 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, PWSTR pCmdLine, in
     return 0;
 }
 
-static void input(myrgb& c, int& brushWidth)
-{
-    while (true)
-    {
+static void input(myrgb& c, int& brushWidth){
+    while (true) {
         
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
             break;
 
-        if ((GetAsyncKeyState(VK_UP) & 0x8000))
-        {
-            switch (mode)
-            {
-            case 1:
+        if ((GetAsyncKeyState(VK_UP) & 0x8000)) {
+            switch (mode) {
+            case 1: {
                 brushWidth += 1;
                 break;
-            case 2:
+            }
+            case 2: {
                 if (c.r < 255) c.r += 1;
                 break;
-            case 3:
+            }
+            case 3: {
                 if (c.g < 255) c.g += 1;
                 break;
-            case 4:
-                 if (c.b < 255) c.b += 1;
-                 break;
+            }
+            case 4: {
+                if (c.b < 255) c.b += 1;
+                break;
+            }
             default:
                 "theres been an error";
             }
